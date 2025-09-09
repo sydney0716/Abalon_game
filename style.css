@@ -1,0 +1,226 @@
+h1 {
+    font-family: 'Georgia', serif;
+    font-size: 4em;
+    color: #fff;
+    text-shadow: 3px 3px 6px rgba(0,0,0,0.5);
+    margin-top: 20px;
+    margin-bottom: 10px;
+}
+
+body {
+    font-family: sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #222;
+    background-size: cover;
+    background-position: center;
+    color: #fff;
+    min-height: 100vh;
+}
+
+#game-board {
+    position: relative;
+    margin-top: 20px;
+    padding: 10px;
+    background-image: url('wood_texture.jpg');
+    background-size: cover;
+    background-position: center;
+    border: 2px solid rgba(255, 255, 255, 0.5);
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+}
+
+#game-board.animating {
+    pointer-events: none;
+}
+
+.row {
+    display: flex;
+    justify-content: center;
+    margin-bottom: -17px;
+}
+
+.row:last-child {
+    margin-bottom: 0;
+}
+
+.cell {
+    width: 60px;
+    height: 69px;
+    margin: 0 -1px;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.cell::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: gray;
+    clip-path: url(#hexagon-with-hole);
+}
+
+.cell::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+
+    clip-path: url(#hexagon-with-hole);
+    -webkit-clip-path: url(#hexagon-with-hole);
+
+    background-image: url('data:image/svg+xml;utf8, <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 69"> <path d="M30 0 L60 17.25 L60 51.75 L30 69 L0 51.75 L0 17.25 Z" fill="none" stroke="black" stroke-width="2"/></svg>');
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+    pointer-events: none;
+}
+
+
+.marble {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.5), 2px 2px 5px rgba(0,0,0,0.3);
+    cursor: pointer;
+    position: absolute;
+    transition: transform 0.4s ease-in-out;
+}
+
+.marble.pushed-off {
+    opacity: 0;
+    transition: transform 0.8s cubic-bezier(0.5, -0.5, 1, 1), opacity 0.8s ease-out;
+}
+
+.marble:hover {
+    transform: scale(1.1);
+}
+
+.black {
+    background: radial-gradient(circle at 15px 15px, #555, #000);
+}
+
+.white {
+    background: radial-gradient(circle at 15px 15px, #fff, #ccc);
+}
+
+#game-info {
+    margin-top: 20px;
+    font-size: 1.2em;
+    color: #fff;
+    background-color: rgba(0, 0, 0, 0.5);
+    padding: 10px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+#game-info p {
+    margin: 0;
+}
+
+#scoreboard {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.player-score {
+    display: flex;
+    align-items: center;
+    margin: 0 20px;
+}
+
+.marble-icon {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 10px;
+}
+
+#black-score, #white-score {
+    font-size: 1.5em;
+    font-weight: bold;
+}
+
+.marble.selected {
+    box-shadow: 0 0 15px 5px #3498db, inset 0 0 10px rgba(0,0,0,0.5);
+    transform: scale(1.15);
+}
+
+#debug-pan {
+    margin-top: 20px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    background-color: rgba(255, 255, 255, 0.8);
+    color: #000;
+    width: 80%;
+    max-width: 600px;
+    min-height: 50px;
+    white-space: pre-line;
+    font-family: monospace;
+}
+
+.coord-text {
+    display: none;
+    position: absolute;
+    top: 5px;
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.4);
+    z-index: 0;
+    pointer-events: none;
+}
+
+.move-arrow {
+    position: absolute;
+    width: 0;
+    height: 0;
+    border-left: 15px solid transparent;
+    border-right: 15px solid transparent;
+    border-bottom: 30px solid rgba(0, 255, 255, 0.7);
+    cursor: pointer;
+    transform-origin: center center;
+    z-index: 10;
+    filter: drop-shadow(0 0 5px #0ff);
+}
+
+#game-over {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 40px;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 100;
+}
+
+#winner-message {
+    font-size: 2em;
+    margin-bottom: 20px;
+}
+
+#play-again-btn {
+    padding: 10px 20px;
+    font-size: 1.2em;
+    cursor: pointer;
+}
+
+#message-box {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: rgba(255, 0, 0, 0.5);
+    border-radius: 5px;
+    color: white;
+}

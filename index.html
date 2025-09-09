@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abalone Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <svg width="0" height="0">
+        <defs>
+            <clipPath id="hexagon-with-hole">
+                <path d="M30 0 L60 17.25 L60 51.75 L30 69 L0 51.75 L0 17.25 Z M30 14.5 A 20 20 0 1 0 30 54.5 A 20 20 0 1 0 30 14.5 Z" fill-rule="evenodd"/>
+            </clipPath>
+        </defs>
+    </svg>
+
+    <h1>Abalone</h1>
+
+    <div id="game-info">
+        <div id="scoreboard">
+            <div class="player-score">
+                <div class="marble-icon black"></div>
+                <span id="black-score">0</span>
+            </div>
+            <div class="player-score">
+                <div class="marble-icon white"></div>
+                <span id="white-score">0</span>
+            </div>
+        </div>
+        <p>Current turn: <span id="current-turn">White</span></p>
+        <div id="message-box" style="display: none;"></div>
+    </div>
+
+    <div id="game-board">
+    </div>
+
+    <div id="game-over" style="display: none;">
+        <h2 id="winner-message"></h2>
+        <button id="play-again-btn">Play Again</button>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
