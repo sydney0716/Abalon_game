@@ -33,6 +33,11 @@ body {
     box-shadow: 0 0 20px rgba(0,0,0,0.5);
 }
 
+/* Remove board layer nudge if not wanted, but keeping it doesn't hurt if 0,0 */
+#board-layer {
+    transform: translate(0px, 0px);
+}
+
 #game-board.animating {
     pointer-events: none;
 }
@@ -55,35 +60,15 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    /* Visuals removed */
 }
 
 .cell::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: gray;
-    clip-path: url(#hexagon-with-hole);
+    content: none;
 }
 
 .cell::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-
-    clip-path: url(#hexagon-with-hole);
-    -webkit-clip-path: url(#hexagon-with-hole);
-
-    background-image: url('data:image/svg+xml;utf8, <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 69"> <path d="M30 0 L60 17.25 L60 51.75 L30 69 L0 51.75 L0 17.25 Z" fill="none" stroke="black" stroke-width="2"/></svg>');
-    background-size: cover;
-    background-repeat: no-repeat;
-    background-position: center;
-    pointer-events: none;
+    content: none;
 }
 
 
