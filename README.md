@@ -13,7 +13,7 @@ This project is a web-based implementation of the classic board game, Abalone. I
 *   **Undo Button**: Made a mistake? Rewind your move with a sleek popup notification.
     *   (실수를 하셨나요? 실행 취소 버튼을 눌러 수를 되돌릴 수 있습니다.)
 *   **Sound Effects**: Audio for moving, colliding marbles.
-    *   (구슬 이동, 잡기, 충돌 시 들리는 만족스러운 효과음.)
+    *   (구슬 이동, 충돌 시 효과음이 있습니다.)
 
 ## How to Play / 하는 방법
 
