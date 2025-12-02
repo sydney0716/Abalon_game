@@ -22,7 +22,9 @@ body {
 #game-board {
     position: relative;
     margin-top: 20px;
-    padding: 10px;
+    padding: 60px; /* Increased padding for gutter */
+    min-width: 600px;
+    min-height: 600px;
     background-image: url('wood_texture.jpg');
     background-size: cover;
     background-position: center;
@@ -96,8 +98,8 @@ body {
 }
 
 .marble.pushed-off {
-    opacity: 0;
-    transition: transform 0.8s cubic-bezier(0.5, -0.5, 1, 1), opacity 0.8s ease-out;
+    /* Removed opacity: 0 to keep them visible in gutter */
+    transition: transform 0.8s cubic-bezier(0.5, -0.5, 1, 1);
 }
 
 .marble:hover {

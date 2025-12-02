@@ -69,6 +69,55 @@ class Game {
                 }
             }
         }
+        this.generateGutterMap();
+    }
+
+    generateGutterMap() {
+        this.gutterMap = new Map(); // Maps "off-board coordinate string" -> {q, r, rotation}
+        const tempSlots = [];
+
+        // Iterate over all board cells to find "exit" neighbors
+        for (const [coordStr, _] of this.board) {
+            const parts = coordStr.match(/q=(-?\d+), r=(-?\d+)/);
+            if (!parts) continue;
+            const q = parseInt(parts[1], 10);
+            const r = parseInt(parts[2], 10);
+            const coord = new Coordinate(q, r);
+
+            const neighbors = this.getNeighbors(coord);
+            neighbors.forEach(n => {
+                if (!this.board.has(n.toString())) {
+                    // Check if we already found this slot
+                    if (!tempSlots.some(s => s.coord.equals(n))) {
+                         // Calculate angle for sorting (0 to 2PI)
+                        // Hex to Pixel conversion (approximate for angle)
+                        // x = q + r/2
+                        // y = r
+                        const x = n.q + n.r/2;
+                        const y = n.r * (Math.sqrt(3)/2); // Aspect ratio correction not strictly needed for sorting but good for accuracy
+                        let angle = Math.atan2(y, x);
+                        
+                        tempSlots.push({
+                            coord: n,
+                            angle: angle
+                        });
+                    }
+                }
+            });
+        }
+
+        // Sort by angle to create a ring
+        tempSlots.sort((a, b) => a.angle - b.angle);
+
+        this.orderedGutterSlots = tempSlots.map(s => s.coord);
+        
+        // Re-populate Map with index info
+        this.orderedGutterSlots.forEach((coord, index) => {
+            this.gutterMap.set(coord.toString(), {
+                coord: coord,
+                index: index
+            });
+        });
     }
 
     clearSelection() {
@@ -365,28 +414,176 @@ class GameUI {
         this.playAgainBtn = playAgainBtn;
         this.messageBox = messageBox;
         this.isAnimating = false;
+        
+        // Physics State
+        this.deadMarbles = []; // { angle, velocity, color, element, isDragging }
+        this.gutterRadiusX = 320; // Ellipse radii for gutter track
+        this.gutterRadiusY = 270; 
+        this.dragState = null; // { marbleIndex, startAngle, lastAngle, lastTime }
+
+        // Setup Layers
+        this.gameBoard.innerHTML = ''; // Clear anything existing
+        this.boardLayer = document.createElement('div');
+        this.boardLayer.id = 'board-layer';
+        // Position relative so it takes up space in the parent
+        this.boardLayer.style.position = 'relative'; 
+        this.boardLayer.style.width = '100%';
+        this.boardLayer.style.height = '100%';
+        this.boardLayer.style.pointerEvents = 'none'; // Allow clicks to pass through if empty
+        
+        // Restore Hex Layout
+        this.boardLayer.style.display = 'flex';
+        this.boardLayer.style.flexDirection = 'column';
+        this.boardLayer.style.alignItems = 'center';
+        this.boardLayer.style.justifyContent = 'center';
+        
+        this.gutterLayer = document.createElement('div');
+        this.gutterLayer.id = 'gutter-layer';
+        this.gutterLayer.style.position = 'absolute';
+        this.gutterLayer.style.top = '0';
+        this.gutterLayer.style.left = '0';
+        this.gutterLayer.style.width = '100%';
+        this.gutterLayer.style.height = '100%';
+        this.gutterLayer.style.pointerEvents = 'none'; // Marbles will be auto
+
+        this.gameBoard.appendChild(this.boardLayer);
+        this.gameBoard.appendChild(this.gutterLayer);
 
         const handleInteraction = (e) => {
             if (this.isAnimating) return;
             
             let target;
             if (e.type === 'touchstart') {
-                e.preventDefault();
+                // e.preventDefault(); // Don't prevent default globally, let specific handlers decide
                 const touch = e.touches[0];
                 target = document.elementFromPoint(touch.clientX, touch.clientY);
             } else {
                 target = e.target;
             }
+            
+            if (!target) return;
 
-            if (target.classList.contains('marble')) {
+            if (target.classList.contains('marble') && target.closest('#board-layer')) {
                 this.handleMarbleClick(target);
             } else if (target.classList.contains('cell')) {
                 this.handleCellClick(target);
             }
         };
 
+        // Attach board interactions to the board layer (or keep on gameBoard but filter)
+        // Since layers cover everything, we can keep using gameBoard but check target
         this.gameBoard.addEventListener('click', handleInteraction);
-        this.gameBoard.addEventListener('touchstart', handleInteraction);
+        this.gameBoard.addEventListener('touchstart', (e) => {
+             // Only prevent default if interacting with board elements to prevent scrolling?
+             // For now, loose.
+             handleInteraction(e);
+        });
+
+        this.startPhysicsLoop();
+    }
+
+    startPhysicsLoop() {
+        const loop = () => {
+            this.updatePhysics();
+            requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
+    }
+
+    updatePhysics() {
+        // 1. Apply Physics (Velocity, Friction)
+        // 2. Handle Collisions (Simple separation)
+        // 3. Update DOM Positions
+        
+        const friction = 0.95;
+        const collisionRadius = 0.15; // Radians buffer between marbles (~size of marble)
+
+        // Update velocities and angles
+        this.deadMarbles.forEach(dm => {
+            if (!dm.isDragging) {
+                dm.angle += dm.velocity;
+                dm.velocity *= friction;
+                if (Math.abs(dm.velocity) < 0.001) dm.velocity = 0;
+            }
+        });
+
+        // Simple Collision Detection (Bubble Sort style or pairwise)
+        // Sort by angle temporarily to check neighbors? 
+        // Since angle wraps -PI to PI, it's a circle.
+        // We won't re-order the array constantly, just check constraints.
+        // For robust beads-on-wire, we iterate and push apart.
+        
+        // Naive Push:
+        // Check every pair? N^2 is fine for < 30 marbles.
+        for (let i = 0; i < this.deadMarbles.length; i++) {
+            for (let j = i + 1; j < this.deadMarbles.length; j++) {
+                let m1 = this.deadMarbles[i];
+                let m2 = this.deadMarbles[j];
+                
+                let diff = m2.angle - m1.angle;
+                // Normalize diff to -PI to PI
+                while (diff <= -Math.PI) diff += 2*Math.PI;
+                while (diff > Math.PI) diff -= 2*Math.PI;
+                
+                if (Math.abs(diff) < collisionRadius) {
+                    // Collision! Push apart.
+                    const push = (collisionRadius - Math.abs(diff)) / 2;
+                    if (diff > 0) {
+                        if (!m1.isDragging) m1.angle -= push * 0.1; // Soft push
+                        if (!m2.isDragging) m2.angle += push * 0.1;
+                        // Transfer velocity/bounce?
+                        // Simple elastic collision simulation
+                        let temp = m1.velocity;
+                        m1.velocity = m2.velocity;
+                        m2.velocity = temp;
+                    } else {
+                        if (!m1.isDragging) m1.angle += push * 0.1;
+                        if (!m2.isDragging) m2.angle -= push * 0.1;
+                        let temp = m1.velocity;
+                        m1.velocity = m2.velocity;
+                        m2.velocity = temp;
+                    }
+                }
+            }
+        }
+        
+        // Normalize angles 0 to 2PI for cleanliness
+        this.deadMarbles.forEach(dm => {
+             // Keep in -PI to PI range for atan2 compatibility
+             while (dm.angle <= -Math.PI) dm.angle += 2*Math.PI;
+             while (dm.angle > Math.PI) dm.angle -= 2*Math.PI;
+        });
+
+        // Render positions
+        const centerPos = this.getCenterCellPos();
+        if (centerPos) {
+            this.deadMarbles.forEach(dm => {
+                if (dm.element) {
+                    // Elliptical Orbit
+                    // x = Rx * cos(theta)
+                    // y = Ry * sin(theta)
+                    // Note: Y is inverted in logic (-r), but for visual placement:
+                    // top = center.y + y
+                    const x = this.gutterRadiusX * Math.cos(dm.angle);
+                    const y = this.gutterRadiusY * Math.sin(dm.angle);
+                    
+                    // CenterPos points to the top-left of the center cell?
+                    // No, getCenterCellPos returns offset to top-left of board.
+                    // We want Center of Board.
+                    // getCenterCellPos likely points to (0,0) cell's top-left.
+                    // (0,0) cell is center. It's 60x69. Center is +30, +35.
+                    const cx = centerPos.left + 30;
+                    const cy = centerPos.top + 35;
+
+                    dm.element.style.left = `${cx + x - 22.5}px`; // -22.5 to center the 45px marble
+                    dm.element.style.top = `${cy + y - 22.5}px`;
+                }
+            });
+        }
+    }
+
+    reset() {
+        this.deadMarbles = [];
     }
 
     handleMarbleClick(marble) {
@@ -428,6 +625,20 @@ class GameUI {
         this.render();
     }
 
+    // Helper to find the visual center of the board (q=0, r=0)
+    getCenterCellPos() {
+        const centerCell = this.gameBoard.querySelector(`[data-q='0'][data-r='0']`);
+        if (!centerCell) return null;
+        
+        const rect = centerCell.getBoundingClientRect();
+        const boardRect = this.gameBoard.getBoundingClientRect();
+        
+        return {
+            left: rect.left - boardRect.left,
+            top: rect.top - boardRect.top
+        };
+    }
+
     animateMove(moves) {
         this.isAnimating = true;
         this.clearMoveArrows();
@@ -445,6 +656,8 @@ class GameUI {
                 this.render();
             }
         };
+
+        const centerPos = this.getCenterCellPos();
 
         moves.forEach(move => {
             const fromCell = this.gameBoard.querySelector(`[data-q='${move.from.q}'][data-r='${move.from.r}']`);
@@ -464,7 +677,46 @@ class GameUI {
             const transitionEndHandler = (event) => {
                 if (event.target !== marble) return;
                 marble.removeEventListener('transitionend', transitionEndHandler);
-                marble.style.opacity = 0; // Hide the marble after animation
+                
+                if (!toCell) {
+                    // Create physics marble in gutter layer
+                    const exitCoord = move.to;
+                    const exitX = (exitCoord.q * 60) + (exitCoord.r * 30);
+                    const exitY = -(exitCoord.r * 52); // Inverted Y
+                    const angle = Math.atan2(exitY, exitX);
+
+                    const deadMarbleEl = document.createElement('div');
+                    deadMarbleEl.classList.add('marble', move.color, 'pushed-off');
+                    deadMarbleEl.style.position = 'absolute';
+                    deadMarbleEl.style.cursor = 'grab';
+                    deadMarbleEl.style.pointerEvents = 'auto'; // Enable clicks
+                    
+                    // Initial position (will be overwritten by physics loop instantly)
+                    // But we want it to transition smoothly? 
+                    // The CSS transition on the original marble ends here.
+                    // We replace the original marble with this new one.
+                    
+                    this.gutterLayer.appendChild(deadMarbleEl);
+                    
+                    const newDeadMarble = {
+                        angle: angle,
+                        velocity: 0, // Could calculate impact velocity if we want
+                        color: move.color,
+                        element: deadMarbleEl,
+                        isDragging: false
+                    };
+
+                    // Add drag listeners to the new element
+                    this.setupGutterDrag(deadMarbleEl, newDeadMarble);
+
+                    this.deadMarbles.push(newDeadMarble);
+                    
+                    // Remove the original animating marble (it was inside the cell)
+                    marble.remove(); 
+                } else {
+                    marble.style.opacity = 0; 
+                }
+
                 onTransitionEnd();
             };
             marble.addEventListener('transitionend', transitionEndHandler);
@@ -475,26 +727,141 @@ class GameUI {
                 const dy = toRect.top - fromRect.top;
                 marble.style.transform = `translate(${dx}px, ${dy}px)`;
             } else {
-                const direction = move.to.subtract(move.from);
-                const offBoardDx = direction.q * 100 + (direction.r * 50);
-                const offBoardDy = direction.r * 87;
-                marble.style.transform = `translate(${offBoardDx}px, ${offBoardDy}px) scale(0)`;
-                marble.classList.add('pushed-off');
+                if (centerPos) {
+                    // Animate towards the gutter ring radius
+                    // We target the point on the ellipse corresponding to the angle
+                    const exitX = (move.to.q * 60) + (move.to.r * 30);
+                    const exitY = -(move.to.r * 52); 
+                    const angle = Math.atan2(exitY, exitX);
+                    
+                    const targetX = this.gutterRadiusX * Math.cos(angle);
+                    const targetY = this.gutterRadiusY * Math.sin(angle);
+                    
+                    // Convert to absolute page coords for the transform calculation
+                    // centerPos is offset of board (0,0) cell from gameBoard top-left
+                    // But wait, render loop uses centerPos + 30...
+                    // We need to be consistent.
+                    // Let's just use the same relative math as previous steps for now to ensure it clears the board.
+                    // 1.5x push logic was working fine for the visual push.
+                    // We can just stick to the 1.5x push logic for the transition, 
+                    // and then snap to the exact ellipse radius when physics takes over.
+                    
+                     const absoluteTargetLeft = centerPos.left + targetX;
+                     // Note: Y is inverted logic for math, but CSS 'top' is positive down.
+                     // If targetY is -200 (Top), we add it to centerPos.top.
+                     const absoluteTargetTop = centerPos.top + targetY;
+                    
+                    const currentLeft = fromRect.left - this.gameBoard.getBoundingClientRect().left;
+                    const currentTop = fromRect.top - this.gameBoard.getBoundingClientRect().top;
+                    
+                    const dx = absoluteTargetLeft - currentLeft;
+                    const dy = absoluteTargetTop - currentTop;
+                    
+                    marble.style.transform = `translate(${dx}px, ${dy}px)`;
+                    marble.classList.add('pushed-off');
+                }
             }
         });
     }
 
+    setupGutterDrag(marble, marbleObj) {
+        const startDrag = (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            marbleObj.isDragging = true;
+            marbleObj.velocity = 0;
+            
+            this.dragState = {
+                marble: marbleObj,
+                lastAngle: marbleObj.angle,
+                lastTime: Date.now()
+            };
+
+            const moveHandler = (moveEvent) => {
+                this.handleGutterDrag(moveEvent);
+            };
+            
+            const upHandler = () => {
+                document.removeEventListener('mousemove', moveHandler);
+                document.removeEventListener('mouseup', upHandler);
+                document.removeEventListener('touchmove', moveHandler);
+                document.removeEventListener('touchend', upHandler);
+                
+                if (this.dragState && this.dragState.marble) {
+                    this.dragState.marble.isDragging = false;
+                }
+                this.dragState = null;
+            };
+
+            document.addEventListener('mousemove', moveHandler);
+            document.addEventListener('mouseup', upHandler);
+            document.addEventListener('touchmove', moveHandler, { passive: false });
+            document.addEventListener('touchend', upHandler);
+        };
+
+        marble.addEventListener('mousedown', startDrag);
+        marble.addEventListener('touchstart', startDrag);
+    }
+
+    handleGutterDrag(e) {
+        if (!this.dragState || !this.dragState.marble) return;
+
+        let clientX, clientY;
+        if (e.touches) {
+            clientX = e.touches[0].clientX;
+            clientY = e.touches[0].clientY;
+        } else {
+            clientX = e.clientX;
+            clientY = e.clientY;
+        }
+
+        const boardRect = this.gameBoard.getBoundingClientRect();
+        const centerX = boardRect.left + boardRect.width / 2;
+        const centerY = boardRect.top + boardRect.height / 2;
+
+        const dx = clientX - centerX;
+        const dy = clientY - centerY;
+        
+        let angle = Math.atan2(dy, dx); 
+        
+        // Update Angle
+        const marble = this.dragState.marble;
+        
+        // Handle wrap-around for velocity calc
+        let diff = angle - this.dragState.lastAngle;
+        if (diff > Math.PI) diff -= 2 * Math.PI;
+        if (diff < -Math.PI) diff += 2 * Math.PI;
+
+        marble.angle = angle;
+        
+        // Calculate Velocity (Throw)
+        const now = Date.now();
+        const dt = now - this.dragState.lastTime;
+        if (dt > 0) {
+            // Simple exponential moving average for smooth velocity
+            const instVelocity = diff * (16 / dt); // Normalize to ~60fps
+            // marble.velocity = instVelocity; // Too jittery?
+            marble.velocity = instVelocity * 0.5 + marble.velocity * 0.5; 
+        }
+        
+        this.dragState.lastAngle = angle;
+        this.dragState.lastTime = now;
+    }
+
     render() {
-        this.gameBoard.innerHTML = '';
+        this.boardLayer.innerHTML = '';
         
         for (let i = 0; i < this.game.boardLayout.length; i++) {
             const row = document.createElement('div');
             row.classList.add('row');
+            // Important: Cells need pointer-events auto to be clickable through the overlay
+            row.style.pointerEvents = 'none'; 
 
             for (let j = 0; j < this.game.boardLayout[i]; j++) {
                 const axialCoord = this.game.toAxial(i, j);
                 const cell = document.createElement('div');
                 cell.classList.add('cell');
+                cell.style.pointerEvents = 'auto'; // Make cells clickable
                 cell.dataset.q = axialCoord.q;
                 cell.dataset.r = axialCoord.r;
 
@@ -515,8 +882,10 @@ class GameUI {
                 }
                 row.appendChild(cell);
             }
-            this.gameBoard.appendChild(row);
+            this.boardLayer.appendChild(row);
         }
+
+        // Dead Marbles are now handled by Physics Loop (DOM elements persist in gutterLayer)
 
         this.currentTurnSpan.textContent = this.game.currentTurn === 'white' ? 'White' : 'Black';
         this.whiteScoreSpan.textContent = this.game.whiteScore;
@@ -658,6 +1027,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     playAgainBtn.addEventListener('click', () => {
         game.playAgain();
+        gameUI.reset();
         gameUI.render();
     });
 });
