@@ -417,8 +417,8 @@ class GameUI {
         
         // Physics State
         this.deadMarbles = []; // { angle, velocity, color, element, isDragging }
-        this.gutterRadiusX = 320; // Ellipse radii for gutter track
-        this.gutterRadiusY = 270; 
+        this.gutterRadiusX = 290; // Tighter fit
+        this.gutterRadiusY = 250; 
         this.dragState = null; // { marbleIndex, startAngle, lastAngle, lastTime }
 
         // Setup Layers
@@ -490,6 +490,42 @@ class GameUI {
         requestAnimationFrame(loop);
     }
 
+    getGutterPoint(angle) {
+        // Calculate radius for a Pointy-Top Hexagon at this angle
+        // Pointy-top has vertices at 30, 90, 150... (PI/6, PI/2...)
+        // Flat sides at 0, 60, 120...
+        // So at angle 0, r is minimum (apothem). At angle 30, r is maximum (radius).
+        
+        // Normalize angle to positive 0..2PI
+        let theta = angle;
+        
+        // Apply 30 degree rotation (PI/6) as requested
+        theta += Math.PI / 6;
+        
+        while (theta < 0) theta += 2 * Math.PI;
+        while (theta >= 2 * Math.PI) theta -= 2 * Math.PI;
+
+        // Find which 60-degree sector we are in
+        // We want to center the calculation around the flat side (0 degrees)
+        // The segment goes from -30 to +30 relative to the flat side.
+        // Sector index:
+        const sector = Math.floor((theta + Math.PI/6) / (Math.PI/3));
+        const sectorCenter = sector * (Math.PI/3);
+        const diff = theta - sectorCenter; // Range -PI/6 to +PI/6
+
+        // Distance to edge for a unit hexagon (flat-to-flat width 2)
+        // r = 1 / cos(diff)
+        // This gives r=1 at diff=0 (flat), and r=1.15 at diff=30 (vertex)
+        const rScale = 1 / Math.cos(diff);
+
+        // Scale by our gutter radii
+        // gutterRadiusX/Y are effectively the "apothem" (distance to flat side)
+        return {
+            x: this.gutterRadiusX * rScale * Math.cos(angle),
+            y: this.gutterRadiusY * rScale * Math.sin(angle)
+        };
+    }
+
     updatePhysics() {
         // 1. Apply Physics (Velocity, Friction)
         // 2. Handle Collisions (Simple separation)
@@ -559,24 +595,14 @@ class GameUI {
         if (centerPos) {
             this.deadMarbles.forEach(dm => {
                 if (dm.element) {
-                    // Elliptical Orbit
-                    // x = Rx * cos(theta)
-                    // y = Ry * sin(theta)
-                    // Note: Y is inverted in logic (-r), but for visual placement:
-                    // top = center.y + y
-                    const x = this.gutterRadiusX * Math.cos(dm.angle);
-                    const y = this.gutterRadiusY * Math.sin(dm.angle);
+                    // Hexagonal Track
+                    const pos = this.getGutterPoint(dm.angle);
                     
-                    // CenterPos points to the top-left of the center cell?
-                    // No, getCenterCellPos returns offset to top-left of board.
-                    // We want Center of Board.
-                    // getCenterCellPos likely points to (0,0) cell's top-left.
-                    // (0,0) cell is center. It's 60x69. Center is +30, +35.
                     const cx = centerPos.left + 30;
                     const cy = centerPos.top + 35;
 
-                    dm.element.style.left = `${cx + x - 22.5}px`; // -22.5 to center the 45px marble
-                    dm.element.style.top = `${cy + y - 22.5}px`;
+                    dm.element.style.left = `${cx + pos.x - 22.5}px`; // -22.5 to center the 45px marble
+                    dm.element.style.top = `${cy + pos.y - 22.5}px`;
                 }
             });
         }
@@ -728,14 +754,14 @@ class GameUI {
                 marble.style.transform = `translate(${dx}px, ${dy}px)`;
             } else {
                 if (centerPos) {
-                    // Animate towards the gutter ring radius
-                    // We target the point on the ellipse corresponding to the angle
+                    // Animate towards the gutter ring radius (Hexagonal)
                     const exitX = (move.to.q * 60) + (move.to.r * 30);
                     const exitY = -(move.to.r * 52); 
                     const angle = Math.atan2(exitY, exitX);
                     
-                    const targetX = this.gutterRadiusX * Math.cos(angle);
-                    const targetY = this.gutterRadiusY * Math.sin(angle);
+                    const targetPos = this.getGutterPoint(angle);
+                    const targetX = targetPos.x;
+                    const targetY = targetPos.y;
                     
                     // Convert to absolute page coords for the transform calculation
                     // centerPos is offset of board (0,0) cell from gameBoard top-left

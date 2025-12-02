@@ -25,7 +25,7 @@ body {
     padding: 60px; /* Increased padding for gutter */
     min-width: 600px;
     min-height: 600px;
-    background-image: url('wood_texture.jpg');
+    background-image: url('board.png');
     background-size: cover;
     background-position: center;
     border: 2px solid rgba(255, 255, 255, 0.5);
