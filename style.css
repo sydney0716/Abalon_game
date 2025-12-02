@@ -35,7 +35,7 @@ body {
 
 /* Remove board layer nudge if not wanted, but keeping it doesn't hurt if 0,0 */
 #board-layer {
-    transform: translate(0px, 0px);
+    transform: translate(0px, 55px);
 }
 
 #game-board.animating {
@@ -45,7 +45,8 @@ body {
 .row {
     display: flex;
     justify-content: center;
-    margin-bottom: -17px;
+    /* VERTICAL SPACING: Make more negative to squeeze rows closer */
+    margin-bottom: -16px;
 }
 
 .row:last-child {
@@ -55,7 +56,8 @@ body {
 .cell {
     width: 60px;
     height: 69px;
-    margin: 0 -1px;
+    /* HORIZONTAL SPACING: The second number (-1px). Make more negative to squeeze cells closer */
+    margin: 0 0px;
     position: relative;
     display: flex;
     justify-content: center;
