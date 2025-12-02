@@ -35,7 +35,16 @@ body {
 
 /* Remove board layer nudge if not wanted, but keeping it doesn't hurt if 0,0 */
 #board-layer {
+    /* Use Translate to nudge the grid (X Y) */
+    /* e.g. translate(0px, 10px) moves marbles DOWN 10px */
+    /* e.g. translate(10px, 0px) moves marbles RIGHT 10px */
     transform: translate(0px, 55px);
+}
+
+/* --- ADJUST THIS TO MOVE GUTTER --- */
+#gutter-layer {
+    /* Move the gutter ring independently if needed */
+    transform: translate(0px, 0px);
 }
 
 #game-board.animating {

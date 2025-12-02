@@ -417,8 +417,8 @@ class GameUI {
         
         // Physics State
         this.deadMarbles = []; // { angle, velocity, color, element, isDragging }
-        this.gutterRadiusX = 290; // Tighter fit
-        this.gutterRadiusY = 250; 
+        this.gutterRadiusX = 275; // Tighter fit
+        this.gutterRadiusY = 275; 
         this.dragState = null; // { marbleIndex, startAngle, lastAngle, lastTime }
 
         // Setup Layers
@@ -480,6 +480,80 @@ class GameUI {
         });
 
         this.startPhysicsLoop();
+    }
+
+    drawGutterOutline() {
+        const svgNS = "http://www.w3.org/2000/svg";
+        const svg = document.createElementNS(svgNS, "svg");
+        svg.style.position = "absolute";
+        svg.style.top = "0";
+        svg.style.left = "0";
+        svg.style.width = "100%";
+        svg.style.height = "100%";
+        svg.style.pointerEvents = "none";
+        svg.style.overflow = "visible";
+        svg.style.zIndex = "0"; // Behind marbles
+
+        // Generate Path
+        // We sample the gutter function 
+        let d = "";
+        const samples = 360;
+        for (let i = 0; i <= samples; i++) {
+            const angle = (i / samples) * 2 * Math.PI;
+            const pos = this.getGutterPoint(angle);
+            
+            // Adjust for center of boardLayer?
+            // boardLayer is flex centered. 
+            // BUT we don't know the exact center pixel coordinate inside boardLayer easily without rects.
+            // However, getGutterPoint returns coords relative to the board CENTER.
+            // If we append this SVG to boardLayer, and position it absolute... 
+            // Actually, boardLayer contains the grid. The grid is centered.
+            // We need to find the (0,0) point visually relative to boardLayer.
+            // Since boardLayer is flex centered, the center of boardLayer is the center of the board.
+            // So we can translate the path to 50% 50%?
+            // No, getGutterPoint returns px offsets.
+            // Let's try putting the path at center.
+            
+            // Actually, `render` puts cells in boardLayer.
+            // `getCenterCellPos` calculates offset from gameBoard.
+            
+            // Simplest: Append SVG to gutterLayer (absolute 0,0).
+            // Use getCenterCellPos (or dynamic update) to position the path?
+            // But drawGutterOutline is called ONCE.
+            // Physics update moves marbles.
+            // The outline should be static relative to the board.
+            
+            // Let's append to boardLayer, but use a group <g> centered.
+            // If boardLayer is 100% size, center is 50% width/height.
+            // BUT boardLayer contents (rows) are centered.
+            // Does (0,0) math align with 50% 50%?
+            // Marbles are rendered relative to `getCenterCellPos`.
+            // Let's assume the center of the board is roughly the center of the screen area for now.
+            // Or better: Use the logic from updatePhysics to draw the line in the loop? No, heavy.
+            
+            // Re-eval: Just draw a path centered at 0,0 and use CSS to center the SVG group?
+            // Let's assume SVG is 100% width/height.
+            // We need to add `width/2` `height/2` to points?
+            // Only if we know width/height.
+            
+            // Let's rely on `this.boardLayer` being centered.
+            // Wait, `boardLayer` is `position: relative`.
+            // If I append absolute SVG, it's relative to boardLayer.
+            // If boardLayer matches gameBoard size, its center is gameBoard center.
+            // This matches getCenterCellPos logic roughly.
+            // I will add `50%` offset to path points.
+        }
+        
+        // Actually, let's just create the element and update its path in `updatePhysics`?
+        // That ensures it tracks perfectly even if resized.
+        this.gutterOutlinePath = document.createElementNS(svgNS, "path");
+        this.gutterOutlinePath.setAttribute("stroke", "black");
+        this.gutterOutlinePath.setAttribute("stroke-width", "5");
+        this.gutterOutlinePath.setAttribute("fill", "none");
+        this.gutterOutlinePath.setAttribute("opacity", "0.5"); // Semi-transparent
+        
+        svg.appendChild(this.gutterOutlinePath);
+        this.gutterLayer.appendChild(svg);
     }
 
     startPhysicsLoop() {
@@ -593,14 +667,13 @@ class GameUI {
         // Render positions
         const centerPos = this.getCenterCellPos();
         if (centerPos) {
+            const cx = centerPos.left + 30;
+            const cy = centerPos.top + 35;
+
             this.deadMarbles.forEach(dm => {
                 if (dm.element) {
                     // Hexagonal Track
                     const pos = this.getGutterPoint(dm.angle);
-                    
-                    const cx = centerPos.left + 30;
-                    const cy = centerPos.top + 35;
-
                     dm.element.style.left = `${cx + pos.x - 22.5}px`; // -22.5 to center the 45px marble
                     dm.element.style.top = `${cy + pos.y - 22.5}px`;
                 }
