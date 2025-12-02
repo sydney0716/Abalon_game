@@ -31,6 +31,7 @@
         </div>
         <p>Current turn: <span id="current-turn">White</span></p>
         <div id="message-box" style="display: none;"></div>
+        <button id="undo-btn" style="padding: 5px 10px; margin-top: 10px; cursor: pointer;">Undo Move</button>
     </div>
 
     <div id="game-board">
@@ -39,6 +40,10 @@
     <div id="game-over" style="display: none;">
         <h2 id="winner-message"></h2>
         <button id="play-again-btn">Play Again</button>
+    </div>
+
+    <div id="undo-modal" style="display: none;">
+        <h2>Move Undone</h2>
     </div>
 
     <script src="game.js"></script>

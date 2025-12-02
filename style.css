@@ -22,7 +22,7 @@ body {
 #game-board {
     position: relative;
     margin-top: 20px;
-    padding: 60px; /* Increased padding for gutter */
+    padding: 60px; 
     min-width: 600px;
     min-height: 600px;
     background-image: url('board.png');
@@ -33,17 +33,11 @@ body {
     box-shadow: 0 0 20px rgba(0,0,0,0.5);
 }
 
-/* Remove board layer nudge if not wanted, but keeping it doesn't hurt if 0,0 */
 #board-layer {
-    /* Use Translate to nudge the grid (X Y) */
-    /* e.g. translate(0px, 10px) moves marbles DOWN 10px */
-    /* e.g. translate(10px, 0px) moves marbles RIGHT 10px */
     transform: translate(0px, 55px);
 }
 
-/* --- ADJUST THIS TO MOVE GUTTER --- */
 #gutter-layer {
-    /* Move the gutter ring independently if needed */
     transform: translate(0px, 0px);
 }
 
@@ -54,7 +48,6 @@ body {
 .row {
     display: flex;
     justify-content: center;
-    /* VERTICAL SPACING: Make more negative to squeeze rows closer */
     margin-bottom: -16px;
 }
 
@@ -65,13 +58,11 @@ body {
 .cell {
     width: 60px;
     height: 69px;
-    /* HORIZONTAL SPACING: The second number (-1px). Make more negative to squeeze cells closer */
     margin: 0 0px;
     position: relative;
     display: flex;
     justify-content: center;
     align-items: center;
-    /* Visuals removed */
 }
 
 .cell::before {
@@ -94,7 +85,6 @@ body {
 }
 
 .marble.pushed-off {
-    /* Removed opacity: 0 to keep them visible in gutter */
     transition: transform 0.8s cubic-bezier(0.5, -0.5, 1, 1);
 }
 
@@ -202,6 +192,20 @@ body {
     border-radius: 10px;
     text-align: center;
     z-index: 100;
+}
+
+#undo-modal {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background-color: rgba(0, 0, 0, 0.8);
+    padding: 20px 40px;
+    border-radius: 10px;
+    text-align: center;
+    z-index: 200;
+    color: white;
+    pointer-events: none;
 }
 
 #winner-message {
