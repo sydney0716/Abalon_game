@@ -2,7 +2,7 @@
 
 This project is a web-based implementation of the classic board game, Abalone. It was inspired by a request from client(which is my girlfriend) to have a version of the game that could be easily played on an iPad or any modern web browser.
 
-이 프로젝트는 아발론(Abalone)이라는 클래식 보드게임을 웹으로 구현한 것입니다. 제 소중한 클라이언트인(여자 친구)가 아발론을 아이패드로 쉽게 하고 싶다고 해서 만들게 되었습니다.
+이 프로젝트는 아발론(Abalone)이라는 클래식 보드게임을 웹으로 구현한 것입니다. 제 소중한 클라이언트인 여자 친구가 아발론을 아이패드로 하고 싶다고 해서 만들게 되었습니다.
 
 ![Gameplay Screenshot](screenshot.png)
 
